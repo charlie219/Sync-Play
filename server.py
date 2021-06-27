@@ -10,11 +10,12 @@ class Server:
     def __init__(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server = 'localhost'            # make it blank for the AWS es2 instance
+        server = ''            # make it blank for the AWS es2 instance
         port = 8080                     # Enable incoming trafic from security groups
 
         server_ip = socket.gethostbyname(server)
         self.HEADER = 4
+
         try:
             self.server_socket.bind((server, port))
         except socket.error as e:
@@ -28,6 +29,7 @@ class Server:
 
 
         self.server_socket.listen()
+        print(":: Server is Running ::")
         print("Waiting for a connection")
         self.event_loop()
     
@@ -96,10 +98,8 @@ class Server:
                         client_info['Group ID'] = new_group
                         self.insert_client(client_info, client_sock, 1)
 
-                        print(new_group)
                         msg = str(new_group)
                         client_sock.send(bytes(msg, 'utf-8'))
-
 
                     else:
 
@@ -130,13 +130,11 @@ class Server:
                             
 
             for sock in  exception_socket:
-                
                 print("Connection Closed by user- " , self.client_list[sock]['Username'])
                 
                 # if the disconnected socket is an Admin
                 if sock in self.Admin_list:
-                    print("Group ID- ", self.client_list[sock]['Group ID'], " CLOSED.....")
-
+                    
                     # Remove the client info and Group
                     del self.Groups[self.client_list[sock]['Group ID']]
                     del self.client_list[sock]

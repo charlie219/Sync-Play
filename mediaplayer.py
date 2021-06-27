@@ -10,25 +10,25 @@ import threading
 
 
 class Window(QWidget):
-    def __init__(self, sock, client_info):
+    def __init__(self, userSocket, userInfo):
         super().__init__()
-        self.sock = sock
-        self.isAdmin = client_info['isAdmin']
-        self.group_id = client_info['Group ID']
-        self.uname = client_info['Username']
+        self.userSocket = userSocket
+        self.isCurrentUserAdmin = userInfo['isAdmin']
+        self.group_id = userInfo['Group ID']
+        self.userName = userInfo['Username']
         self.HEADER = 4
 
         self.setWindowTitle("::  𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟  ::")
         self.setGeometry(0,0, 1900, 950)
         self.setWindowIcon(QIcon('images/window_icon.png'))
-        p = self.palette()
-        p.setColor(QPalette.Window, Qt.black)
-        self.setPalette(p)
+        palette = self.palette()
+        palette.setColor(QPalette.Window, Qt.black)
+        self.setPalette(palette)
 
         # if the client is not admin, the start the execution thread
-        if not self.isAdmin:
-            command_thread = threading.Thread(target = self.execute_command_thread, args = (1,))
-            command_thread.start()
+        if not self.isCurrentUserAdmin:
+            serverListeningThread = threading.Thread(target = self.execute_command_thread, args = (1,))
+            serverListeningThread.start()
 
         self.ui()
         self.show()
@@ -46,18 +46,17 @@ class Window(QWidget):
         # Creat video Widget object
         videowidget = QVideoWidget()
         
-
-        # Creat open the file Buttons
-        openBtn = QPushButton('Open Video')
-        openBtn.clicked.connect(self.open_file)
-        openBtn.setStyleSheet('background-color:white;')
-        hboxLayout.addWidget(openBtn)
+        # Creat (open file) Buttons
+        openFileBtn = QPushButton('Open Video')
+        openFileBtn.clicked.connect(self.open_file)
+        openFileBtn.setStyleSheet('background-color:white;')
+        hboxLayout.addWidget(openFileBtn)
 
         # View Box
         vboxLayout = QVBoxLayout()
         vboxLayout.setContentsMargins(10,0,10,20)
 
-        if self.isAdmin:
+        if self.isCurrentUserAdmin:
         
             # Create play Button
             self.playBtn = QPushButton('Play')
@@ -66,7 +65,6 @@ class Window(QWidget):
             self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
             self.playBtn.clicked.connect(self.play_video)
 
-            # Create Slider for the 
             self.slider = QSlider(Qt.Horizontal)
             self.slider.setRange(0,0)
             self.slider.sliderMoved.connect(self.set_position)
@@ -76,30 +74,29 @@ class Window(QWidget):
             hboxLayout.addWidget(self.slider,0)
 
             # Heading Layout for Group Code
-            head = QHBoxLayout()
-            align_label = QLabel()
-            align_label.setFixedSize(200, 100)
+            header = QHBoxLayout()
+            titleAlignmentLabel1 = QLabel()
+            titleAlignmentLabel1.setFixedSize(200, 100)
             
             # Banner
-            topLabel = QLabel()
-            topLabel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-            topLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟\n 𝐆𝐫𝐨𝐮𝐩 𝐈𝐃 - " + str(self.group_id))
-            topLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:15pt;')
-            topLabel.setAlignment(Qt.AlignCenter)
-            topLabel.setFixedSize(700, 100)
+            titleLabel = QLabel()
+            titleLabel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+            titleLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟\n 𝐆𝐫𝐨𝐮𝐩 𝐈𝐃 - " + str(self.group_id))
+            titleLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:15pt;')
+            titleLabel.setAlignment(Qt.AlignCenter)
+            titleLabel.setFixedSize(700, 100)
             
-            align_label2 = QLabel()
-            align_label2.setFixedSize(200, 100)
+            titleAlignmentLabel2 = QLabel()
+            titleAlignmentLabel2.setFixedSize(200, 100)
         
-            head.addWidget(align_label)
-            head.addWidget(topLabel)
-            head.addWidget(align_label2)
-            vboxLayout.addLayout(head)
+            header.addWidget(titleAlignmentLabel1)
+            header.addWidget(titleLabel)
+            header.addWidget(titleAlignmentLabel2)
+            vboxLayout.addLayout(header)
 
             # Media Signals
             self.mediaPlayer.positionChanged.connect(self.position_changed)
             self.mediaPlayer.durationChanged.connect(self.duration_changed)
-
 
         # Create Leave Button
         self.leaveBtn = QPushButton('Leave Group')
@@ -122,7 +119,7 @@ class Window(QWidget):
         filename, path = QFileDialog.getOpenFileName(self, "Open Video")         
         if filename != '':
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
-            if self.isAdmin:
+            if self.isCurrentUserAdmin:
                 self.playBtn.setEnabled(True)
 
     def position_changed(self, position):
@@ -130,7 +127,6 @@ class Window(QWidget):
  
     def duration_changed(self, duration):
         self.slider.setRange(0, duration)
- 
  
     def set_position(self, position):
         self.mediaPlayer.setPosition(position)
@@ -155,25 +151,28 @@ class Window(QWidget):
     # To send the commmands to the server
     def send_message(self, play = None, slider = None):
 
-        command_payload ={
+        adminAction ={
             'Play'  :   play,
             'Slider':   slider
         }
         
-        msg = pickle.dumps(command_payload)
+        msg = pickle.dumps(adminAction)
         msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
-        self.sock.send(msg)
+        self.userSocket.send(msg)
 
     # To execute the command sent from the Admin
     def execute_command_thread(self, flag):
 
         while(1):
-            message_header = self.sock.recv(self.HEADER)
+            try:
+                message_header = self.userSocket.recv(self.HEADER)
+            except e:
+                continue
             if not len(message_header):
                 continue
             message_length = int(message_header.decode('utf-8').strip())
 
-            command = pickle.loads(self.sock.recv(message_length))
+            command = pickle.loads(self.userSocket.recv(message_length))
             if command['Play'] is not None:
                 if command['Play']:
                     self.mediaPlayer.play()
@@ -187,8 +186,8 @@ class Window(QWidget):
     def leave_group(self):
         
         # Close the Socket
-        self.sock.shutdown(socket.SHUT_RDWR)
-        self.sock.close()
+        self.userSocket.shutdown(socket.SHUT_RDWR)
+        self.userSocket.close()
         sys.exit(1)
 
 

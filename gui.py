@@ -105,7 +105,7 @@ class Application:
         create_label.place(relx = 0.1, rely = 0.08, relheight = 0.38, relwidth = 0.27)
 
         create_button = tk.Button(frame,  bd = 5, fg = "white", bg = "#006600", text = "Create Group", font = ("serif bold", 13),\
-                activebackground = "#00e673", activeforeground = "black", command = lambda: Client(self.user_name, 1, frame = self.root))
+                activebackground = "#00e673", activeforeground = "black", command = lambda: Client(self.user_name, 1, previousFrame = self.root))
         create_button.place(relx = 0.105, rely = 0.5, relwidth = 0.26, relheight = 0.1)
 
         join_img = Image.open('images/join.png')
@@ -140,7 +140,7 @@ class Application:
 
             submit_button = tk.Button(frame, bd = 5, fg = "white", bg = "#550080", text = "GO >>", font = ("serif bold", 13),\
                 activebackground = "#dd99ff", activeforeground = "black", \
-                command = lambda : Client(self.user_name, 2, group_id = entry.get(), frame = self.root) if chk(entry.get()) else required_field())
+                command = lambda : Client(self.user_name, 2, group_id = entry.get(), previousFrame = self.root) if chk(entry.get()) else required_field())
             submit_button.place(relx = 0.82, rely = 0.645, relwidth = 0.15, relheight = 0.1)
 
 
