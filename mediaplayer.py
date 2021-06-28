@@ -166,10 +166,12 @@ class Window(QWidget):
         while(1):
             try:
                 message_header = self.userSocket.recv(self.HEADER)
-            except e:
+            except:
                 continue
             if not len(message_header):
                 continue
+            if message_header == "":
+                sys.exit(0)
             message_length = int(message_header.decode('utf-8').strip())
 
             command = pickle.loads(self.userSocket.recv(message_length))
@@ -186,8 +188,6 @@ class Window(QWidget):
     def leave_group(self):
         
         # Close the Socket
-        self.userSocket.shutdown(socket.SHUT_RDWR)
-        self.userSocket.close()
         sys.exit(1)
 
 

@@ -11,7 +11,7 @@ class Server:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server = ''            # make it blank for the AWS es2 instance
-        port = 8080                     # Enable incoming trafic from security groups
+        port = 5690                    # Enable incoming trafic from security groups
 
         server_ip = socket.gethostbyname(server)
         self.HEADER = 4

@@ -13,10 +13,10 @@ class Client:
         if previousFrame:
             previousFrame.destroy()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host_ip = "127.0.0.1"     # For this to work on your machine this must be equal to the ipv4 address of the machine running the server
+        self.host_ip = "3.108.42.151"     # For this to work on your machine this must be equal to the ipv4 address of the machine running the server
                                     # You can find this address by typing ipconfig in CMD and copying the ipv4 address. Again this must be the servers
                                     # ipv4 address. This feild will be the same for all your clients.
-        self.host_port = 8080            # Same as the server 
+        self.host_port = 5690            # Same as the server 
         self.HEADER = 4
         # Important static variables
         self.userName = user_name
