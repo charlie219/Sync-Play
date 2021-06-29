@@ -1,9 +1,15 @@
+# Authored By- Akash Kumar Bhagat
+# Github Id - @charlie219
+# Email - akashkbhagat221199@gmail.com
+# Date - 26-6-2021
+
+
 from PyQt5.QtWidgets import *
 import sys
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtGui import QIcon, QPalette
-from PyQt5.QtCore import Qt, QRect, QUrl
+from PyQt5.QtCore import *
 import socket
 import pickle
 import threading
@@ -27,9 +33,8 @@ class Window(QWidget):
 
         # if the client is not admin, the start the execution thread
         if not self.isCurrentUserAdmin:
-            serverListeningThread = threading.Thread(target = self.execute_command_thread, args = (1,))
-            serverListeningThread.start()
-
+            self.serverListeningThread()
+        
         self.ui()
         self.show()
 
@@ -47,10 +52,10 @@ class Window(QWidget):
         videowidget = QVideoWidget()
         
         # Creat (open file) Buttons
-        openFileBtn = QPushButton('Open Video')
-        openFileBtn.clicked.connect(self.open_file)
-        openFileBtn.setStyleSheet('background-color:white;')
-        hboxLayout.addWidget(openFileBtn)
+        self.openFileBtn = QPushButton('Open Video')
+        self.openFileBtn.clicked.connect(self.open_file)
+        self.openFileBtn.setStyleSheet('background-color:white;')
+        hboxLayout.addWidget(self.openFileBtn)
 
         # View Box
         vboxLayout = QVBoxLayout()
@@ -116,8 +121,12 @@ class Window(QWidget):
 
     def open_file(self):
 
-        filename, path = QFileDialog.getOpenFileName(self, "Open Video")         
+        file_extentions = "Video (*.mp4 *.mkv *.mov *.wmv *.avi *.avcdh *.flv *.f4v *.swf *.webm *.mpeq2 *.mp3)"
+        filename, path = QFileDialog.getOpenFileName(self, "Open Video", "", file_extentions)
+        self.filename = filename.split('/')[-1]
+        print(self.filename)       
         if filename != '':
+            self.openFileBtn.setText('Video Loaded')
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
             if self.isCurrentUserAdmin:
                 self.playBtn.setEnabled(True)
@@ -161,35 +170,67 @@ class Window(QWidget):
         self.userSocket.send(msg)
 
     # To execute the command sent from the Admin
-    def execute_command_thread(self, flag):
+    def serverListeningThread(self):
+            self.recv_thread = ServerListeningThread(self.userSocket)
+            self.recv_thread.commandSignal.connect(self.executeAdminCommand)
+            self.recv_thread.start()
+            self.recv_thread.finished.connect(self.AdminLeftMessage)
 
+    def executeAdminCommand(self, command):
+        
+        if command['Play'] is not None:
+            if command['Play']:
+                self.mediaPlayer.play()
+            else:
+                self.mediaPlayer.pause()
+        if command['Slider'] is not None:
+            self.mediaPlayer.setPosition(command['Slider'])
+
+    def AdminLeftMessage(self):
+
+        self.mediaPlayer.pause()
+        adminLeftMessageBox = QMessageBox()
+        adminLeftMessageBox.setWindowTitle("Important")
+        adminLeftMessageBox.setText("Admin Left the Group\n Click to continue watching without admin")
+        adminLeftMessageBox.setIcon(QMessageBox.Warning)
+        adminLeftMessageBox.setStandardButtons(QMessageBox.Ignore)
+
+        adminLeftMessageBox.exec_()
+        self.mediaPlayer.play()
+
+    def leave_group(self):
+
+        # Close the Socket
+        sys.exit(1)
+
+class ServerListeningThread(QThread):
+
+    commandSignal = pyqtSignal(dict)
+    def __init__(self, userSocket):
+        super().__init__()
+        self.userSocket = userSocket
+        self.HEADER = 4
+
+    def run(self):
         while(1):
             try:
                 message_header = self.userSocket.recv(self.HEADER)
             except:
                 continue
             if not len(message_header):
-                continue
-            if message_header == "":
-                sys.exit(0)
+                break
+            
             message_length = int(message_header.decode('utf-8').strip())
 
-            command = pickle.loads(self.userSocket.recv(message_length))
-            if command['Play'] is not None:
-                if command['Play']:
-                    self.mediaPlayer.play()
-                else:
-                    self.mediaPlayer.pause()
-            if command['Slider'] is not None:
-                self.mediaPlayer.setPosition(command['Slider'])
-            
-            # Continnue the thread
-    
-    def leave_group(self):
+            # If the admin has left the group
+            if message_length == 5:
+                self.userSocket.recv(message_length)
+                break
+            else:
+                command = pickle.loads(self.userSocket.recv(message_length))
+                self.commandSignal.emit(command)
+                
         
-        # Close the Socket
-        sys.exit(1)
-
 
 # app = QApplication(sys.argv)
 # window = Window(1)

@@ -1,3 +1,9 @@
+# Authored By- Akash Kumar Bhagat
+# Github Id - @charlie219
+# Email - akashkbhagat221199@gmail.com
+# Date - 25-6-2021
+
+
 import socket
 from PyQt5.QtWidgets import *
 import sys
@@ -13,10 +19,13 @@ class Client:
         if previousFrame:
             previousFrame.destroy()
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host_ip = "3.108.42.151"     # For this to work on your machine this must be equal to the ipv4 address of the machine running the server
-                                    # You can find this address by typing ipconfig in CMD and copying the ipv4 address. Again this must be the servers
-                                    # ipv4 address. This feild will be the same for all your clients.
-        self.host_port = 5690            # Same as the server 
+
+        # If you are running the server in local device, host_ip will be '127.0.0.1'
+        self.host_ip = "127.0.0.1"     # For this to work on your machine this must be equal to the ipv4 address of the machine running the server
+                                       # You can find this address by typing ipconfig in CMD and copying the ipv4 address. Again this must be the servers
+                                       # ipv4 address. This feild will be the same for all your clients.
+        # self.host_ip = '3.108.42.151'
+        self.host_port = 5690          # Same as the server 
         self.HEADER = 4
         # Important static variables
         self.userName = user_name
@@ -56,7 +65,4 @@ class Client:
         window = Window(self.client_socket, payload)
         sys.exit(app.exec_())
 
-        #print("Message sent", payload)
-
-#client1 = Client("karan_236", 2, 6790)
 

@@ -1,3 +1,9 @@
+# Authored By- Akash Kumar Bhagat
+# Github Id - @charlie219
+# Email - akashkbhagat221199@gmail.com
+# Date - 25-6-2021
+
+
 from collections import defaultdict
 from random import randint
 import socket
@@ -10,7 +16,8 @@ class Server:
     def __init__(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server = ''            # make it blank for the AWS es2 instance
+
+        server = ''                    # make it blank for the AWS es2 instance
         port = 5690                    # Enable incoming trafic from security groups
 
         server_ip = socket.gethostbyname(server)
@@ -24,7 +31,7 @@ class Server:
         # Important static variables
         self.Groups = {}
         #self.sock_list = [self.server_socket]
-        self.Admin_list = defaultdict(list)
+        self.Admin_list = {}
         self.client_list = {}
 
 
@@ -135,6 +142,9 @@ class Server:
                 # if the disconnected socket is an Admin
                 if sock in self.Admin_list:
                     
+                    # Send message to all members that the admin left
+                    self.send_command(sock, dict())
+
                     # Remove the client info and Group
                     del self.Groups[self.client_list[sock]['Group ID']]
                     del self.client_list[sock]
