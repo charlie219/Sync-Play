@@ -61,53 +61,64 @@ class Window(QWidget):
         vboxLayout = QVBoxLayout()
         vboxLayout.setContentsMargins(10,0,10,20)
 
-        if self.isCurrentUserAdmin:
+
+        # Create play Button
+        self.playBtn = QPushButton('Play')
+        self.playBtn.setStyleSheet('background-color:white;')
+        self.playBtn.setEnabled(False)
+        self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.playBtn.clicked.connect(self.play_video)
+
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(0,0)
+        self.slider.sliderMoved.connect(self.set_position)
         
-            # Create play Button
-            self.playBtn = QPushButton('Play')
-            self.playBtn.setStyleSheet('background-color:white;')
-            self.playBtn.setEnabled(False)
-            self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-            self.playBtn.clicked.connect(self.play_video)
+        # Adding widgets to Horizontal layout
+        hboxLayout.addWidget(self.playBtn)
+        hboxLayout.addWidget(self.slider,0)
 
-            self.slider = QSlider(Qt.Horizontal)
-            self.slider.setRange(0,0)
-            self.slider.sliderMoved.connect(self.set_position)
-            
-            # Adding widgets to Horizontal layout
-            hboxLayout.addWidget(self.playBtn)
-            hboxLayout.addWidget(self.slider,0)
-
-            # Heading Layout for Group Code
-            header = QHBoxLayout()
-            titleAlignmentLabel1 = QLabel()
-            titleAlignmentLabel1.setFixedSize(200, 100)
-            
-            # Banner
-            titleLabel = QLabel()
-            titleLabel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-            titleLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟\n 𝐆𝐫𝐨𝐮𝐩 𝐈𝐃 - " + str(self.group_id))
-            titleLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:15pt;')
-            titleLabel.setAlignment(Qt.AlignCenter)
-            titleLabel.setFixedSize(700, 100)
-            
-            titleAlignmentLabel2 = QLabel()
-            titleAlignmentLabel2.setFixedSize(200, 100)
+        # Heading Layout for Group Code
+        header = QHBoxLayout()
+        self.titleAlignmentLabel1 = QLabel()
+        self.titleAlignmentLabel1.setFixedSize(200, 100)
         
-            header.addWidget(titleAlignmentLabel1)
-            header.addWidget(titleLabel)
-            header.addWidget(titleAlignmentLabel2)
-            vboxLayout.addLayout(header)
+        # Banner
+        self.titleLabel = QLabel()
+        self.titleLabel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+        self.titleLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟\n 𝐆𝐫𝐨𝐮𝐩 𝐈𝐃 - " + str(self.group_id))
+        self.titleLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:15pt;')
+        self.titleLabel.setAlignment(Qt.AlignCenter)
+        self.titleLabel.setFixedSize(700, 100)
+        
+        self.titleAlignmentLabel2 = QLabel()
+        self.titleAlignmentLabel2.setFixedSize(200, 100)
+    
+        header.addWidget(self.titleAlignmentLabel1)
+        header.addWidget(self.titleLabel)
+        header.addWidget(self.titleAlignmentLabel2)
+        vboxLayout.addLayout(header)
 
-            # Media Signals
-            self.mediaPlayer.positionChanged.connect(self.position_changed)
-            self.mediaPlayer.durationChanged.connect(self.duration_changed)
+        # Media Signals
+        self.mediaPlayer.positionChanged.connect(self.position_changed)
+        self.mediaPlayer.durationChanged.connect(self.duration_changed)
+
+        if not self.isCurrentUserAdmin:
+            self.playBtn.setVisible(False)
+            self.slider.setVisible(False)
+        
+
+        # Show/Hide Group ID button
+        self.showGroupIdBtn = QPushButton('Full Screen')
+        self.showGroupIdBtn.setStyleSheet('background-color:white;')
+        self.showGroupIdBtn.clicked.connect(self.titleLabelHandeler)
+        hboxLayout.addWidget(self.showGroupIdBtn)
 
         # Create Leave Button
         self.leaveBtn = QPushButton('Leave Group')
         self.leaveBtn.setStyleSheet('background-color:red; color : white')
         self.leaveBtn.clicked.connect(self.leave_group)
         hboxLayout.addWidget(self.leaveBtn)
+
 
         # Create viewbox layout
         vboxLayout.addWidget(videowidget)
@@ -128,8 +139,22 @@ class Window(QWidget):
         if filename != '':
             self.openFileBtn.setText('Video Loaded')
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
-            if self.isCurrentUserAdmin:
-                self.playBtn.setEnabled(True)
+            self.playBtn.setEnabled(True)
+    
+    def titleLabelHandeler(self):
+
+        #print('clicked', self.titleLabel.isVisible())
+        if self.titleLabel.isVisible():
+            self.showGroupIdBtn.setText('Show Group ID')
+            self.titleLabel.setVisible(False)
+            self.titleAlignmentLabel2.setVisible(False)
+            self.titleAlignmentLabel1.setVisible(False)
+        else:
+            self.showGroupIdBtn.setText('Full Screen')
+            self.titleLabel.setVisible(True)
+            self.titleAlignmentLabel2.setVisible(True)
+            self.titleAlignmentLabel1.setVisible(True)
+
 
     def position_changed(self, position):
         self.slider.setValue(position)
@@ -193,9 +218,15 @@ class Window(QWidget):
         adminLeftMessageBox.setWindowTitle("Important")
         adminLeftMessageBox.setText("Admin Left the Group\n Click to continue watching without admin")
         adminLeftMessageBox.setIcon(QMessageBox.Warning)
-        adminLeftMessageBox.setStandardButtons(QMessageBox.Ignore)
-
+        adminLeftMessageBox.setStandardButtons(QMessageBox.Ok)
+        
         adminLeftMessageBox.exec_()
+
+        # Providing play & slide controls if the admin left
+        self.playBtn.setVisible(True)
+        self.slider.setVisible(True)
+        self.playBtn.setText('Pause')
+        self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         self.mediaPlayer.play()
 
     def leave_group(self):
