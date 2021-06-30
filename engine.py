@@ -41,7 +41,8 @@ class Client:
         payload = {
             'Username' : self.userName,
             'Choice'   : self.choice,
-            'isAdmin'  : True
+            'isAdmin'  : True,
+            'Movie'    : None
         }
 
         if self.choice == 2:    
@@ -52,13 +53,18 @@ class Client:
         msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
         self.client_socket.send(msg)
 
-        flag = self.client_socket.recv(4)
-        flag = flag.decode('utf-8')
-        if flag == '0':
-            gui.Application(self.uname)
+        # Recieve Acknowledgement from Server 
+        messageHeader = self.client_socket.recv(self.HEADER)
+        msg_len = int(messageHeader.decode('utf-8'))
+        msg = self.client_socket.recv(msg_len)
+        acknowledgement = pickle.loads(msg)
+
+        if acknowledgement['Group ID'] is None:
+            gui.Application(self.userName)
 
         else:
-            payload['Group ID'] = int(flag)
+            payload['Group ID'] = acknowledgement['Group ID']
+            payload['Movie'] = acknowledgement['Movie']
 
         
         app = QApplication(sys.argv)

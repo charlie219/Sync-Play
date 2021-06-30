@@ -22,6 +22,7 @@ class Window(QWidget):
         self.isCurrentUserAdmin = userInfo['isAdmin']
         self.group_id = userInfo['Group ID']
         self.userName = userInfo['Username']
+        self.filename = userInfo['Movie']
         self.HEADER = 4
 
         self.setWindowTitle("::  𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟  ::")
@@ -37,6 +38,13 @@ class Window(QWidget):
         
         self.ui()
         self.show()
+
+        # If the file name is not chosen by the Admin, we'll disable openfileBtn 
+        if not self.isCurrentUserAdmin:
+            if self.filename is None:
+                self.openFileBtn.setEnabled(False)
+            else:
+                self.openFileButtonReady()
 
 
     def ui(self):
@@ -102,10 +110,10 @@ class Window(QWidget):
         self.mediaPlayer.positionChanged.connect(self.position_changed)
         self.mediaPlayer.durationChanged.connect(self.duration_changed)
 
+        # Restricting Play and Slider for the Admin
         if not self.isCurrentUserAdmin:
             self.playBtn.setVisible(False)
             self.slider.setVisible(False)
-        
 
         # Show/Hide Group ID button
         self.showGroupIdBtn = QPushButton('Full Screen')
@@ -134,12 +142,20 @@ class Window(QWidget):
 
         file_extentions = "Video (*.mp4 *.mkv *.mov *.wmv *.avi *.avcdh *.flv *.f4v *.swf *.webm *.mpeq2 *.mp3)"
         filename, path = QFileDialog.getOpenFileName(self, "Open Video", "", file_extentions)
-        self.filename = filename.split('/')[-1]
-        print(self.filename)       
-        if filename != '':
+
+        # If the user is not admin and the chosen file is incorrect
+        if not self.isCurrentUserAdmin and filename.split('/')[-1] != self.filename:
+            self.incorrectFileNameMessageBox()
+            
+        else:
             self.openFileBtn.setText('Video Loaded')
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
             self.playBtn.setEnabled(True)
+            self.playBtn.setText('Play')
+            self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+
+            if self.isCurrentUserAdmin:
+                self.send_message(filename = filename.split('/')[-1])
     
     def titleLabelHandeler(self):
 
@@ -182,12 +198,23 @@ class Window(QWidget):
             self.mediaPlayer.play()
             self.send_message(play = 1)
 
+    # Message box to show incorrect filename message:
+    def incorrectFileNameMessageBox(self):
+        incorrectFileMessageBox = QMessageBox()
+        incorrectFileMessageBox.setWindowTitle("Important")
+        incorrectFileMessageBox.setText("Selected File is Incorrect\n Contact to the Admin for the Movie")
+        incorrectFileMessageBox.setIcon(QMessageBox.Warning)
+        incorrectFileMessageBox.setStandardButtons(QMessageBox.Ok)
+        
+        incorrectFileMessageBox.exec_()
+
     # To send the commmands to the server
-    def send_message(self, play = None, slider = None):
+    def send_message(self, play = None, slider = None, filename = None):
 
         adminAction ={
             'Play'  :   play,
-            'Slider':   slider
+            'Slider':   slider,
+            'Movie' :   filename
         }
         
         msg = pickle.dumps(adminAction)
@@ -210,6 +237,30 @@ class Window(QWidget):
                 self.mediaPlayer.pause()
         if command['Slider'] is not None:
             self.mediaPlayer.setPosition(command['Slider'])
+        
+        if command['Movie'] is not None:
+            self.filename = command['Movie']
+
+            # if Another movie is selected, then we will stop the previous video
+            # set the mediaPlayer.setPosition to 0
+            self.mediaPlayer.pause()
+            self.mediaPlayer.setPosition(0)
+
+            
+            # MessageBox 
+            self.openFileButtonReady()
+            self.openFileBtn.setEnabled(True)
+
+    
+    # Message Box to notify that admin has selected the movie and open file button is ready
+    def openFileButtonReady(self):
+            openFileButtonReadyMessageBox = QMessageBox()
+            openFileButtonReadyMessageBox.setWindowTitle("Important")
+            openFileButtonReadyMessageBox.setText("Admin has Selected the movie\n Movie: -" + self.filename)
+            openFileButtonReadyMessageBox.setIcon(QMessageBox.Information)
+            openFileButtonReadyMessageBox.setStandardButtons(QMessageBox.Ok)
+            openFileButtonReadyMessageBox.exec_()
+
 
     def AdminLeftMessage(self):
 
@@ -227,6 +278,7 @@ class Window(QWidget):
         self.slider.setVisible(True)
         self.playBtn.setText('Pause')
         self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.openFileBtn.setEnabled(True)
         self.mediaPlayer.play()
 
     def leave_group(self):
@@ -257,6 +309,7 @@ class ServerListeningThread(QThread):
             if message_length == 5:
                 self.userSocket.recv(message_length)
                 break
+                
             else:
                 command = pickle.loads(self.userSocket.recv(message_length))
                 self.commandSignal.emit(command)

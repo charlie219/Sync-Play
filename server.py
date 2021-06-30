@@ -43,9 +43,13 @@ class Server:
     def insert_client(self, client_info, client_sock, isAdmin = 0):
         if isAdmin:
             self.Groups[client_info['Group ID']] = client_sock
-            self.Admin_list[client_sock] = [] 
+            self.Admin_list[client_sock] = {
+                'Members'   :   [],
+                'Group ID'  :   client_info['Group ID'],
+                'Movie'     :   None
+            }
         else:
-            self.Admin_list[self.Groups[client_info['Group ID']]].append(client_sock)
+            self.Admin_list[self.Groups[client_info['Group ID']]]['Members'].append(client_sock)
         self.client_list[client_sock] = {
             'Username' : client_info['Username'],
             'Group ID' : client_info['Group ID'],
@@ -66,10 +70,13 @@ class Server:
 
     # Send Command to each member
     def send_command(self, Admin, command):
-        
+        # Check if Admin has changed the movie
+        if 'Movie' in command and command['Movie'] is not None:
+            self.Admin_list[Admin]['Movie'] = command['Movie']
+
         msg = pickle.dumps(command)
         msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
-        for member in self.Admin_list[Admin]:
+        for member in self.Admin_list[Admin]['Members']:
             member.send(msg)
 
     def event_loop(self):
@@ -85,42 +92,48 @@ class Server:
                 if sock == self.server_socket:
                     
                     # Accept the client
-                    client_sock, addr = self.server_socket.accept()
+                    client_socket, addr = self.server_socket.accept()
 
-                    hdr = client_sock.recv(self.HEADER)
+                    hdr = client_socket.recv(self.HEADER)
                     if not hdr:
                         continue
                     msg_len = int(hdr.decode('utf-8'))
-                    msg = client_sock.recv(msg_len)
+                    msg = client_socket.recv(msg_len)
                     client_info = pickle.loads(msg)
 
-                    print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
-                    #print(client_info)
+                    # We will send this payload as a token of acknowledgement from the server
+                    send_payload = {
+                        'Group ID' : None,
+                        'Movie'    : None
+                    }
+
                     # If the client wants to join a group
                     if client_info['Choice'] == 1:
 
                         # Creating randon 4 digit Group_ID
                         new_group = randint(1111,9999)
-                        while new_group in self.Groups:        new_group = randint(1111,9999)
+                        while new_group in self.Groups:        
+                            new_group = randint(1111,9999)
+
                         client_info['Group ID'] = new_group
-                        self.insert_client(client_info, client_sock, 1)
+                        send_payload['Group ID'] = new_group
 
-                        msg = str(new_group)
-                        client_sock.send(bytes(msg, 'utf-8'))
+                        self.insert_client(client_info, client_socket, 1)
 
-                    else:
+                    elif client_info['Group ID'] in self.Groups:
 
-                        # If the group doesnot exist
-                        if client_info['Group ID'] not in self.Groups:
-                            client_sock.send(bytes('0', 'utf-8'))
-                            continue
-                        else:
-                            msg = client_info['Group ID']
-                            client_sock.send(bytes(str(msg), 'utf-8'))
-                            
-                        self.insert_client(client_info, client_sock)
-                    
-                    socket_list.append(client_sock)
+                        send_payload['Group ID']  = client_info['Group ID']
+                        send_payload['Movie'] = self.Admin_list[self.Groups[client_info['Group ID']]]['Movie']   
+
+                        self.insert_client(client_info, client_socket)
+
+                    # Send Acknowledgment for the connection
+                    msg = pickle.dumps(send_payload)
+                    msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
+                    client_socket.send(msg)
+
+                    print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
+                    socket_list.append(client_socket)
                         
                 # Command/Request from the admin
                 else:
@@ -150,7 +163,7 @@ class Server:
                     del self.client_list[sock]
 
                     # Removing all members form the client_list
-                    for member_sock in self.Admin_list[sock]:
+                    for member_sock in self.Admin_list[sock]['Members']:
                         del self.client_list[member_sock]
                         socket_list.remove(member_sock)
 
@@ -158,7 +171,7 @@ class Server:
                 
                 # other group member
                 else:
-                    self.Admin_list[self.client_list[sock]['Admin']].remove(sock)
+                    self.Admin_list[self.client_list[sock]['Admin']]['Members'].remove(sock)
                     del self.client_list[sock]
 
                 socket_list.remove(sock)

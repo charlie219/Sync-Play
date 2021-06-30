@@ -4,7 +4,7 @@
 # Date - 27-6-2021
 
 
-import server
+from server import Server
 
 if __name__ == "__main__":
-    server_instance = server.Server()
+    server_instance = Server()
