@@ -59,6 +59,7 @@ class Client:
         msg = self.client_socket.recv(msg_len)
         acknowledgement = pickle.loads(msg)
 
+        #print(acknowledgement)
         if acknowledgement['Group ID'] is None:
             gui.Application(self.userName)
 

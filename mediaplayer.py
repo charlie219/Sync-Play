@@ -10,19 +10,22 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtGui import QIcon, QPalette
 from PyQt5.QtCore import *
-import socket
-import pickle
-import threading
+import socket, pickle, threading, time
 
 
 class Window(QWidget):
     def __init__(self, userSocket, userInfo):
         super().__init__()
+        print(userInfo)
         self.userSocket = userSocket
         self.isCurrentUserAdmin = userInfo['isAdmin']
         self.group_id = userInfo['Group ID']
         self.userName = userInfo['Username']
         self.filename = userInfo['Movie']
+        self.groupMembers = []
+        self.isAdminPlaying = False
+
+        self.connection = True
         self.HEADER = 4
 
         self.setWindowTitle("::  𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟  ::")
@@ -32,20 +35,20 @@ class Window(QWidget):
         palette.setColor(QPalette.Window, Qt.black)
         self.setPalette(palette)
 
-        # if the client is not admin, the start the execution thread
-        if not self.isCurrentUserAdmin:
-            self.serverListeningThread()
-        
         self.ui()
         self.show()
 
         # If the file name is not chosen by the Admin, we'll disable openfileBtn 
+        # if the client is not admin, the start the execution thread
         if not self.isCurrentUserAdmin:
             if self.filename is None:
                 self.openFileBtn.setEnabled(False)
+            
+            # If Admin has already Started the movie
             else:
+                self.isAdminPlaying = True
                 self.openFileButtonReady()
-
+        self.serverListeningThread()
 
     def ui(self):
 
@@ -143,6 +146,9 @@ class Window(QWidget):
         file_extentions = "Video (*.mp4 *.mkv *.mov *.wmv *.avi *.avcdh *.flv *.f4v *.swf *.webm *.mpeq2 *.mp3)"
         filename, path = QFileDialog.getOpenFileName(self, "Open Video", "", file_extentions)
 
+        # If no File is Choosen
+        if filename == "":
+            return 
         # If the user is not admin and the chosen file is incorrect
         if not self.isCurrentUserAdmin and filename.split('/')[-1] != self.filename:
             self.incorrectFileNameMessageBox()
@@ -150,6 +156,11 @@ class Window(QWidget):
         else:
             self.openFileBtn.setText('Video Loaded')
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
+            if self.isAdminPlaying:
+                # Ask the current status of the Admin
+                self.send_message()
+                self.isAdminPlaying = False
+
             self.playBtn.setEnabled(True)
             self.playBtn.setText('Play')
             self.playBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
@@ -157,6 +168,11 @@ class Window(QWidget):
             if self.isCurrentUserAdmin:
                 self.send_message(filename = filename.split('/')[-1])
     
+    def sendUpdateToNewMember(self):
+    
+        # Send update about the Admins position play/pause and slider position to keep the members updated
+        self.send_message(play = int(self.playBtn.text() == 'Pause'), slider = self.slider.sliderPosition())
+            
     def titleLabelHandeler(self):
 
         #print('clicked', self.titleLabel.isVisible())
@@ -223,11 +239,25 @@ class Window(QWidget):
 
     # To execute the command sent from the Admin
     def serverListeningThread(self):
-            self.recv_thread = ServerListeningThread(self.userSocket)
-            self.recv_thread.commandSignal.connect(self.executeAdminCommand)
-            self.recv_thread.start()
-            self.recv_thread.finished.connect(self.AdminLeftMessage)
+        self.recv_thread = ServerListeningThread(self.userSocket)
+        self.recv_thread.inboundSignal.connect(self.diffrentiateMessage)
+        self.recv_thread.start()
+        self.recv_thread.finished.connect(self.AdminLeftMessage)
 
+    # To distinguish between an UpdateMemberMessage(from Server to Admin)
+    # or executeAdminCommand messahe (from Server to other members)
+    def diffrentiateMessage(self, message):
+        if self.isCurrentUserAdmin:
+            if 'New Member' in message:
+                self.sendUpdateToNewMember()
+                if message['New Member'] != "":
+                    self.groupMembers.append(message['New Member'])
+            else:
+                self.groupMembers.remove(message['Delete Member'])
+            print(message)
+        else:
+            self.executeAdminCommand(message)
+        
     def executeAdminCommand(self, command):
         
         if command['Play'] is not None:
@@ -246,7 +276,7 @@ class Window(QWidget):
             self.mediaPlayer.pause()
             self.mediaPlayer.setPosition(0)
 
-            
+
             # MessageBox 
             self.openFileButtonReady()
             self.openFileBtn.setEnabled(True)
@@ -261,6 +291,7 @@ class Window(QWidget):
             openFileButtonReadyMessageBox.setStandardButtons(QMessageBox.Ok)
             openFileButtonReadyMessageBox.exec_()
 
+            self.open_file()    
 
     def AdminLeftMessage(self):
 
@@ -284,11 +315,13 @@ class Window(QWidget):
     def leave_group(self):
 
         # Close the Socket
+        self.connection = False
         sys.exit(1)
 
 class ServerListeningThread(QThread):
 
-    commandSignal = pyqtSignal(dict)
+    # Signal from server
+    inboundSignal = pyqtSignal(dict)
     def __init__(self, userSocket):
         super().__init__()
         self.userSocket = userSocket
@@ -312,9 +345,9 @@ class ServerListeningThread(QThread):
                 
             else:
                 command = pickle.loads(self.userSocket.recv(message_length))
-                self.commandSignal.emit(command)
-                
-        
+                self.inboundSignal.emit(command)
+                                    
+
 
 # app = QApplication(sys.argv)
 # window = Window(1)

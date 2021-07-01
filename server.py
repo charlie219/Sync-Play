@@ -50,6 +50,7 @@ class Server:
             }
         else:
             self.Admin_list[self.Groups[client_info['Group ID']]]['Members'].append(client_sock)
+
         self.client_list[client_sock] = {
             'Username' : client_info['Username'],
             'Group ID' : client_info['Group ID'],
@@ -67,6 +68,11 @@ class Server:
 
         except:
             return False
+    
+    def sendMessage(self, client_socket, message):
+        msg = pickle.dumps(message)
+        msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
+        client_socket.send(msg)
 
     # Send Command to each member
     def send_command(self, Admin, command):
@@ -94,17 +100,12 @@ class Server:
                     # Accept the client
                     client_socket, addr = self.server_socket.accept()
 
-                    hdr = client_socket.recv(self.HEADER)
-                    if not hdr:
-                        continue
-                    msg_len = int(hdr.decode('utf-8'))
-                    msg = client_socket.recv(msg_len)
-                    client_info = pickle.loads(msg)
+                    client_info = self.receive_command(client_socket)
 
                     # We will send this payload as a token of acknowledgement from the server
                     send_payload = {
-                        'Group ID' : None,
-                        'Movie'    : None
+                        'Group ID'      : None,
+                        'Movie'         : None,
                     }
 
                     # If the client wants to join a group
@@ -119,22 +120,49 @@ class Server:
                         send_payload['Group ID'] = new_group
 
                         self.insert_client(client_info, client_socket, 1)
+                        print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
+                        socket_list.append(client_socket)
 
                     elif client_info['Group ID'] in self.Groups:
 
                         send_payload['Group ID']  = client_info['Group ID']
-                        send_payload['Movie'] = self.Admin_list[self.Groups[client_info['Group ID']]]['Movie']   
+                        send_payload['Movie'] = self.Admin_list[self.Groups[client_info['Group ID']]]['Movie']  
+                        
+                        newMemberMessage = {
+                            'New Member'    :   client_info['Username']
+                        }
+                        self.sendMessage(self.Groups[client_info['Group ID']], newMemberMessage)
 
+                        # Recieve Admin's Status to update new client
+                        adminUpdate = self.receive_command(self.Groups[client_info['Group ID']])
+                        
                         self.insert_client(client_info, client_socket)
+                        print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
+                        socket_list.append(client_socket)
 
                     # Send Acknowledgment for the connection
-                    msg = pickle.dumps(send_payload)
-                    msg = bytes(f'{len(msg):<{self.HEADER}}', 'utf-8') + msg
-                    client_socket.send(msg)
+                    self.sendMessage(client_socket, send_payload)
 
-                    print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
-                    socket_list.append(client_socket)
-                        
+                elif sock not in self.Admin_list:
+                    msg = self.receive_command(sock)
+
+                    # Connection Closed
+                    if msg is False:
+                        exception_socket += [sock]
+                        continue
+                    
+                    # Send Message to the Client for the new member addition
+                    newMemberMessage = {
+                        'New Member'    :   ""
+                    }
+                    print("newMemberMessage" , newMemberMessage)
+                    self.sendMessage(self.client_list[sock]['Admin'], newMemberMessage)
+
+                    # Recieve Admin's Status to update new client
+                    adminUpdate = self.receive_command(self.client_list[sock]['Admin'])
+                    print("adminUpdate" , adminUpdate)
+                    self.sendMessage(sock, adminUpdate)
+
                 # Command/Request from the admin
                 else:
                     msg = self.receive_command(sock)
@@ -164,6 +192,7 @@ class Server:
 
                     # Removing all members form the client_list
                     for member_sock in self.Admin_list[sock]['Members']:
+                        print("Connection Closed by user- " , self.client_list[member_sock]['Username'])
                         del self.client_list[member_sock]
                         socket_list.remove(member_sock)
 
@@ -171,6 +200,14 @@ class Server:
                 
                 # other group member
                 else:
+                    
+                    # Notifing the Admin that a group member left
+                    memberLeftMessage = {
+                        'Delete Member'  :  self.client_list[sock]['Username']
+                    }
+                    self.sendMessage(self.client_list[sock]['Admin'], memberLeftMessage)
+
+                    # Delet the members Info
                     self.Admin_list[self.client_list[sock]['Admin']]['Members'].remove(sock)
                     del self.client_list[sock]
 

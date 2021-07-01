@@ -129,10 +129,17 @@ class Application:
             # Check for validity
             def chk(group_id):
                 if group_id == 'Group ID' or group_id == '':
+                    required_field()
                     return False
+                for i in group_id:
+                    if not ('0' <= i <= '9'):
+                        incorrectGroupIdType()
+                        return False
             
                 return True
 
+            def incorrectGroupIdType():
+                messagebox.showerror("Incorrect Type", "Invalid Group ID type\nEnter integer ONLY")
             def required_field():
                 messagebox.showerror("Required Field", "Please enter a Group ID to enter")
             
@@ -141,7 +148,7 @@ class Application:
 
             submit_button = tk.Button(frame, bd = 5, fg = "white", bg = "#550080", text = "GO >>", font = ("serif bold", 13),\
                 activebackground = "#dd99ff", activeforeground = "black", \
-                command = lambda : Client(self.user_name, 2, group_id = entry.get(), previousFrame = self.root) if chk(entry.get()) else required_field())
+                command = lambda : Client(self.user_name, 2, group_id = entry.get(), previousFrame = self.root) if chk(entry.get()) else '#')
             submit_button.place(relx = 0.82, rely = 0.645, relwidth = 0.15, relheight = 0.1)
 
 
