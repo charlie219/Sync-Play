@@ -155,12 +155,12 @@ class Server:
                     newMemberMessage = {
                         'New Member'    :   ""
                     }
-                    print("newMemberMessage" , newMemberMessage)
+                    
                     self.sendMessage(self.client_list[sock]['Admin'], newMemberMessage)
 
                     # Recieve Admin's Status to update new client
                     adminUpdate = self.receive_command(self.client_list[sock]['Admin'])
-                    print("adminUpdate" , adminUpdate)
+                    adminUpdate['Slider'] += 2000 
                     self.sendMessage(sock, adminUpdate)
 
                 # Command/Request from the admin

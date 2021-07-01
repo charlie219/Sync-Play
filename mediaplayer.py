@@ -16,7 +16,6 @@ import socket, pickle, threading, time
 class Window(QWidget):
     def __init__(self, userSocket, userInfo):
         super().__init__()
-        print(userInfo)
         self.userSocket = userSocket
         self.isCurrentUserAdmin = userInfo['isAdmin']
         self.group_id = userInfo['Group ID']
@@ -254,7 +253,7 @@ class Window(QWidget):
                     self.groupMembers.append(message['New Member'])
             else:
                 self.groupMembers.remove(message['Delete Member'])
-            print(message)
+            print(self.groupMembers)
         else:
             self.executeAdminCommand(message)
         
