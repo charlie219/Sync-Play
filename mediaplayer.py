@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import *
 import sys
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtGui import QIcon, QPalette
+from PyQt5.QtGui import QIcon, QPalette, QFont
 from PyQt5.QtCore import *
 import socket, pickle, threading, time
 
@@ -22,12 +22,13 @@ class Window(QWidget):
         self.userName = userInfo['Username']
         self.filename = userInfo['Movie']
         self.groupMembers = []
+        self.groupAdmin = userInfo['Group Admin']
         self.isAdminPlaying = False
 
         self.connection = True
         self.HEADER = 4
 
-        self.setWindowTitle("::  𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟  ::")
+        self.setWindowTitle("::  𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 -  𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟  ::")
         self.setGeometry(0,0, 1900, 950)
         self.setWindowIcon(QIcon('images/window_icon.png'))
         palette = self.palette()
@@ -40,6 +41,8 @@ class Window(QWidget):
         # If the file name is not chosen by the Admin, we'll disable openfileBtn 
         # if the client is not admin, the start the execution thread
         if not self.isCurrentUserAdmin:
+            self.MemberInfoLabel.setVisible(False)
+            self.MemberInfoTitleLabel.setVisible(False)
             if self.filename is None:
                 self.openFileBtn.setEnabled(False)
             
@@ -71,6 +74,36 @@ class Window(QWidget):
         vboxLayout = QVBoxLayout()
         vboxLayout.setContentsMargins(10,0,10,20)
 
+        #  Container Vertical box to store the videoVbox and sideVbox
+        containerHBox = QHBoxLayout()
+
+        # VideoWidget Horizontal box layout 
+        videoVBox = QVBoxLayout()
+        videoVBox.addWidget(videowidget, stretch = 3)
+
+
+        # SideInfoLayout which will contain the group info
+        sideVBoxLayout = QVBoxLayout()
+
+
+        # Group Info Lable
+        self.groupInfoLabel = QLabel()
+        self.setGroupInfoLabel()
+        sideVBoxLayout.addWidget(self.groupInfoLabel, stretch = 1)
+        
+
+        # Member Info for the Admin
+        self.MemberInfoTitleLabel = QLabel("---- 𝙈𝙚𝙢𝙗𝙚𝙧 𝙇𝙞𝙨𝙩 ----")
+        self.MemberInfoTitleLabel.setStyleSheet('color: white; font-size:15pt')
+        sideVBoxLayout.addWidget(self.MemberInfoTitleLabel)
+        
+        self.MemberInfoLabel = QLabel()
+        self.setMemberInfoLabel()
+        sideVBoxLayout.addWidget(self.MemberInfoLabel, stretch = 5)
+        containerHBox.addLayout(videoVBox, stretch = 1)
+        containerHBox.addLayout(sideVBoxLayout)
+        
+
 
         # Create play Button
         self.playBtn = QPushButton('Play')
@@ -95,8 +128,8 @@ class Window(QWidget):
         # Banner
         self.titleLabel = QLabel()
         self.titleLabel.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-        self.titleLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 - 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟\n 𝐆𝐫𝐨𝐮𝐩 𝐈𝐃 - " + str(self.group_id))
-        self.titleLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:15pt;')
+        self.titleLabel.setText("𝙎𝙮𝙣𝙘 𝙋𝙡𝙖𝙮 \n 𝔸 𝕍𝕚𝕕𝕖𝕠 𝕊𝕪𝕟𝕔 𝔸𝕡𝕡𝕝𝕚𝕔𝕒𝕥𝕚𝕠𝕟")
+        self.titleLabel.setStyleSheet('background-color: #000000; color: white;border: 2px solid black;font-size:18pt;')
         self.titleLabel.setAlignment(Qt.AlignCenter)
         self.titleLabel.setFixedSize(700, 100)
         
@@ -120,7 +153,7 @@ class Window(QWidget):
         # Show/Hide Group ID button
         self.showGroupIdBtn = QPushButton('Full Screen')
         self.showGroupIdBtn.setStyleSheet('background-color:white;')
-        self.showGroupIdBtn.clicked.connect(self.titleLabelHandeler)
+        self.showGroupIdBtn.clicked.connect(self.groupInfoHandeler)
         hboxLayout.addWidget(self.showGroupIdBtn)
 
         # Create Leave Button
@@ -131,14 +164,35 @@ class Window(QWidget):
 
 
         # Create viewbox layout
-        vboxLayout.addWidget(videowidget)
+        vboxLayout.addLayout(containerHBox)
         vboxLayout.addLayout(hboxLayout)
 
         self.setLayout(vboxLayout)
 
         # Setting the videowidget to mediaplayer obj
         self.mediaPlayer.setVideoOutput(videowidget)
-            
+
+    def setMemberInfoLabel(self):
+        memberStr = "\n"
+        memberStr+= self.userName + "           (𝘈𝘥𝘮𝘪𝘯)"
+
+        for member in self.groupMembers:
+            memberStr += "\n" + member
+
+        self.MemberInfoLabel.setText(memberStr)
+        self.MemberInfoLabel.setAlignment(Qt.AlignLeft)
+        self.MemberInfoLabel.setStyleSheet('color: white; padding-top : 1px;')
+        self.MemberInfoLabel.setFont(QFont("Sanserif",14))
+
+    def setGroupInfoLabel(self):
+        if self.group_id:
+            self.groupInfoLabel.setText(" 𝔾𝕣𝕠𝕦𝕡 𝕀𝔻 :- " + str(self.group_id) + " \n𝔸𝕕𝕞𝕚𝕟 :- " + self.groupAdmin)
+        else:
+            self.groupInfoLabel.setText(" 𝔾𝕣𝕠𝕦𝕡 𝕀𝔻 :- 𝒩𝑜𝓃𝑒\n𝔸𝕕𝕞𝕚𝕟 :- 𝒩𝑜𝓃𝑒 ")
+
+        self.groupInfoLabel.setAlignment(Qt.AlignCenter)
+        self.groupInfoLabel.setFont(QFont("Sanserif", 15))
+        self.groupInfoLabel.setStyleSheet('background-color: black; color: white;border :3px solid blue;border-radius: 20px')
 
     def open_file(self):
 
@@ -155,10 +209,9 @@ class Window(QWidget):
         else:
             self.openFileBtn.setText('Video Loaded')
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(filename)))
-            if self.isAdminPlaying:
-                # Ask the current status of the Admin
-                self.send_message()
-                self.isAdminPlaying = False
+
+            # Ask the current status of the Admin
+            self.send_message()
 
             self.playBtn.setEnabled(True)
             self.playBtn.setText('Play')
@@ -172,19 +225,26 @@ class Window(QWidget):
         # Send update about the Admins position play/pause and slider position to keep the members updated
         self.send_message(play = int(self.playBtn.text() == 'Pause'), slider = self.slider.sliderPosition())
             
-    def titleLabelHandeler(self):
+    def groupInfoHandeler(self):
 
-        #print('clicked', self.titleLabel.isVisible())
         if self.titleLabel.isVisible():
-            self.showGroupIdBtn.setText('Show Group ID')
+            self.showGroupIdBtn.setText('Show Group Info')
             self.titleLabel.setVisible(False)
             self.titleAlignmentLabel2.setVisible(False)
             self.titleAlignmentLabel1.setVisible(False)
+            self.MemberInfoLabel.setVisible(False)
+            self.MemberInfoTitleLabel.setVisible(False)
+            self.groupInfoLabel.setVisible(False)
+            
         else:
             self.showGroupIdBtn.setText('Full Screen')
             self.titleLabel.setVisible(True)
             self.titleAlignmentLabel2.setVisible(True)
             self.titleAlignmentLabel1.setVisible(True)
+            self.groupInfoLabel.setVisible(True)
+            if self.isCurrentUserAdmin:
+                self.MemberInfoLabel.setVisible(True)
+                self.MemberInfoTitleLabel.setVisible(True)
 
 
     def position_changed(self, position):
@@ -253,7 +313,8 @@ class Window(QWidget):
                     self.groupMembers.append(message['New Member'])
             else:
                 self.groupMembers.remove(message['Delete Member'])
-            print(self.groupMembers)
+            #print(self.groupMembers)
+            self.setMemberInfoLabel()
         else:
             self.executeAdminCommand(message)
         
@@ -302,6 +363,11 @@ class Window(QWidget):
         adminLeftMessageBox.setStandardButtons(QMessageBox.Ok)
         
         adminLeftMessageBox.exec_()
+
+        # Change the Group Info Label
+        self.group_id = None
+        self.groupAdmin = None
+        self.setGroupInfoLabel()
 
         # Providing play & slide controls if the admin left
         self.playBtn.setVisible(True)

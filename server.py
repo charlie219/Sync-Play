@@ -106,6 +106,7 @@ class Server:
                     send_payload = {
                         'Group ID'      : None,
                         'Movie'         : None,
+                        'Group Admin'   : None
                     }
 
                     # If the client wants to join a group
@@ -118,6 +119,8 @@ class Server:
 
                         client_info['Group ID'] = new_group
                         send_payload['Group ID'] = new_group
+                        send_payload['Group Admin'] = client_info['Username']
+                        
 
                         self.insert_client(client_info, client_socket, 1)
                         print(f"Connection Established : Username - {client_info['Username']}, addr = {addr}")
@@ -126,7 +129,8 @@ class Server:
                     elif client_info['Group ID'] in self.Groups:
 
                         send_payload['Group ID']  = client_info['Group ID']
-                        send_payload['Movie'] = self.Admin_list[self.Groups[client_info['Group ID']]]['Movie']  
+                        send_payload['Movie'] = self.Admin_list[self.Groups[client_info['Group ID']]]['Movie']
+                        send_payload['Group Admin'] =  self.client_list[self.Groups[client_info['Group ID']]]['Username']
                         
                         newMemberMessage = {
                             'New Member'    :   client_info['Username']
@@ -160,7 +164,8 @@ class Server:
 
                     # Recieve Admin's Status to update new client
                     adminUpdate = self.receive_command(self.client_list[sock]['Admin'])
-                    adminUpdate['Slider'] += 2000 
+                    if adminUpdate['Play']:
+                        adminUpdate['Slider'] += 1800 
                     self.sendMessage(sock, adminUpdate)
 
                 # Command/Request from the admin
