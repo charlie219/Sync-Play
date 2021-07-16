@@ -8,3 +8,4 @@ from server import Server
 
 if __name__ == "__main__":
     server_instance = Server()
+    server_instance.run()

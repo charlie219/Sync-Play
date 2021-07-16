@@ -38,7 +38,6 @@ class Server:
         self.server_socket.listen()
         print(":: Server is Running ::")
         print("Waiting for a connection")
-        self.event_loop()
     
     def insert_client(self, client_info, client_sock, isAdmin = 0):
         if isAdmin:
@@ -85,7 +84,7 @@ class Server:
         for member in self.Admin_list[Admin]['Members']:
             member.send(msg)
 
-    def event_loop(self):
+    def run(self):
 
         socket_list = [self.server_socket]
         while True:
@@ -217,7 +216,6 @@ class Server:
                     del self.client_list[sock]
 
                 socket_list.remove(sock)
-                sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
 
             #print(self.Admin_list,len(self.client_list.keys()))
